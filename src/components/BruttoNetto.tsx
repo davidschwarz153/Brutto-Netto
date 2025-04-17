@@ -34,7 +34,6 @@ const BruttoNettoRechnerModern = () => {
   const [pvJahr, setPvJahr] = useState<number>(0);
   const [rvJahr, setRvJahr] = useState<number>(0);
   const [avJahr, setAvJahr] = useState<number>(0);
-  // Removed unused state variable "abzuegeGesamtJahr"
   const [showDetails, setShowDetails] = useState<boolean>(false);
 
   useEffect(() => {
@@ -66,7 +65,6 @@ const BruttoNettoRechnerModern = () => {
     setSoliJahr(soli);
 
     const gesamtAbzuege = sozialabgaben + lohnsteuer + soli;
-    // Removed setAbzuegeGesamtJahr as "abzuegeGesamtJahr" is no longer used
 
     const nettoJahr = bruttoJahr - gesamtAbzuege;
     setNettoJahrResult(nettoJahr);
@@ -93,8 +91,8 @@ const BruttoNettoRechnerModern = () => {
   };
 
   return (
-    <div className=" min-h-screen py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto bg-white shadow-md rounded-lg overflow-hidden">
+    <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto bg-white shadow-md rounded-lg overflow-hidden w-full">
         <div className="px-6 py-8">
           <h1 className="text-3xl font-semibold text-gray-800 text-center mb-6">
             Brutto-Netto-Rechner 2025
@@ -128,18 +126,18 @@ const BruttoNettoRechnerModern = () => {
             <div className="mt-4 text-center">
               <button
                 onClick={toggleDetails}
-                className="inline-flex items-center px-4 py-2 bg-indigo-500 hover:bg-indigo-700 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                className="inline-flex items-center px-4 py-2 bg-indigo-500 hover:bg-indigo-700 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors duration-200"
               >
                 {showDetails ? (
                   <>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 transform transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                     Weniger Details
                   </>
                 ) : (
                   <>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 transform transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13l-3 3m0 0l-3-3m3 3V8m0 13a9 9 0 110-18 9 9 0 010 18z" />
                     </svg>
                     Mehr Details
@@ -149,7 +147,7 @@ const BruttoNettoRechnerModern = () => {
             </div>
           </div>
 
-          {showDetails && (
+          <div className={`transition-all duration-700 ease-in-out overflow-hidden transform ${showDetails ? 'max-h-[2000px] opacity-100 translate-y-0' : 'max-h-0 opacity-0 -translate-y-4'}`}>
             <div className="mt-8 overflow-x-auto">
               <h3 className="text-lg font-semibold text-gray-700 mb-3">Details der Abzüge</h3>
               <table className="min-w-full divide-y divide-gray-200 shadow-sm rounded-md">
@@ -215,9 +213,8 @@ const BruttoNettoRechnerModern = () => {
                 </tbody>
               </table>
             </div>
-          )}
+          </div>
         </div>
-
       </div>
     </div>
   );
