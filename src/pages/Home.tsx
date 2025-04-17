@@ -1,4 +1,4 @@
-import BruttoNettoRechner2024 from "../components/bruttonetto";
+import BruttoNettoRechner2024 from "../components/BruttoNetto";
 
 export default function Home() {
   return (
