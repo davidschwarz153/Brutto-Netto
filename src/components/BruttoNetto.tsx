@@ -52,7 +52,7 @@ interface Abzuege {
 }
 
 const BruttoNettoRechner2024 = () => {
-  const [bruttoJahr, setBruttoJahr] = useState<number>(40000);
+  const [bruttoJahr, setBruttoJahr] = useState<number>(50000);
   const [steuerklasse, setSteuerklasse] = useState<number>(1);
   const [hatKinder] = useState<boolean>(false);
   const [istInKirche] = useState<boolean>(false);
