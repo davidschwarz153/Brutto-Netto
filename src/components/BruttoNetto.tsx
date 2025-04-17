@@ -194,8 +194,8 @@ const BruttoNettoRechner2024 = () => {
       {netto !== null && abzuege !== null && (
         <div className="p-4 rounded-lg mt-6 border border-gray-200">
           
-          <p className="text-lg mt-2">Netto-Jahresgehalt: <span className="text-green-900 font-semibold" >{netto.toFixed(2)} €</span> </p>
-          <p className="text-lg">Netto-Monatsgehalt: <span className="text-green-900 font-semibold" >{(netto / 12).toFixed(2)} €</span> </p>
+          <p className="text-lg mt-2">Netto-Jahr: <span className="text-green-900 font-semibold" >{netto.toFixed(2)} €</span> </p>
+          <p className="text-lg">Netto-Monat: <span className="text-green-900 font-semibold" >{(netto / 12).toFixed(2)} €</span> </p>
         </div>
       )}
     </div>
