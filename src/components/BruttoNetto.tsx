@@ -1,205 +1,226 @@
-import  { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 
-const GRUNDFREIBETRAG_2024 = 11604;
-const GRUNDFREIBETRAG_MARRIED_2024 = 2 * GRUNDFREIBETRAG_2024;
-
-const BBG_KV_PV_2024 = 62100;
-const BBG_RV_AV_2024_WEST = 90600;
-const BBG_RV_AV_2024_OST = 89400;
+const GRUNDFREIBETRAG_2025 = 11604;
+const BBG_KV_PV_2025 = 62100;
+const BBG_RV_AV_2025_WEST = 90600;
 
 const KV_RATE_EMPLOYEE = 0.073;
-const KV_ZUSATZBEITRAG_AVG_2024_EMPLOYEE = 0.0085;
+const KV_ZUSATZBEITRAG_AVG_2025_EMPLOYEE = 0.0085;
 const RV_RATE_EMPLOYEE = 0.093;
 const AV_RATE_EMPLOYEE = 0.013;
-const PV_RATE_EMPLOYEE_MIT_KIND = 0.017;
-const PV_RATE_EMPLOYEE_CHILDLESS = 0.023;
-
-const TAX_BRACKET_1_LIMIT_2024 = GRUNDFREIBETRAG_2024;
-const TAX_BRACKET_2_LIMIT_2024 = 17005;
-const TAX_BRACKET_3_LIMIT_2024 = 66760;
-const TAX_BRACKET_4_LIMIT_2024 = 277825;
-
-const SOLI_THRESHOLD_SINGLE_2024 = 18130;
-const SOLI_THRESHOLD_MARRIED_2024 = 36260;
-const SOLI_RATE = 0.055;
-
-const KIRCHENSTEUER_RATE_DEFAULT = 0.09;
-const KIRCHENSTEUER_RATE_BW_BY = 0.08;
+const PV_RATE_EMPLOYEE = 0.019;
 
 const WERBUNGSKOSTEN_PAUSCHALE = 1230;
 const SONDERABGABEN_PAUSCHALE = 36;
 
-const Steuerklassen = {
-  1: { name: "I: ledig/geschieden/verwitwet", isMarried: false },
-  2: { name: "II: alleinerziehend", isMarried: false },
-  3: { name: "III: verheiratet (Allein-/Besserverdiener)", isMarried: true },
-  4: { name: "IV: verheiratet (beide ähnlich)", isMarried: true },
-  5: { name: "V: verheiratet (Geringverdiener)", isMarried: true },
-  6: { name: "VI: Zweitjob/weitere LST-Karte", isMarried: false },
+const SOLI_THRESHOLD_SINGLE_2025 = 18130;
+const SOLI_RATE = 0.055;
+
+const TAX_BRACKET_2_LIMIT_2025 = 17050;
+const TAX_BRACKET_3_LIMIT_2025 = 69321;
+const TAX_BRACKET_4_LIMIT_2025 = 277825;
+
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
 };
 
-interface Abzuege {
-  lohnsteuer: number;
-  soli: number;
-  kirchensteuer: number;
-  kv: number;
-  rv: number;
-  av: number;
-  pv: number;
-  gesamtSozialabgaben: number;
-  gesamtSteuern: number;
-  gesamt: number;
-}
-
-const BruttoNettoRechner2024 = () => {
+const BruttoNettoRechnerModern = () => {
   const [bruttoJahr, setBruttoJahr] = useState<number>(50000);
-  const [steuerklasse, setSteuerklasse] = useState<number>(1);
-  const [hatKinder] = useState<boolean>(false);
-  const [istInKirche] = useState<boolean>(false);
-  const [bundesland] = useState<string>("HE");
-  const [arbeitsortOst] = useState<boolean>(false);
-
-  const [netto, setNetto] = useState<number | null>(null);
-  const [abzuege, setAbzuege] = useState<Abzuege | null>(null);
-  // Removed unused calculationYear state
+  const [nettoMonat, setNettoMonat] = useState<number>(0);
+  const [nettoJahrResult, setNettoJahrResult] = useState<number>(0);
+  const [lohnsteuerJahr, setLohnsteuerJahr] = useState<number>(0);
+  const [soliJahr, setSoliJahr] = useState<number>(0);
+  const [kvJahr, setKvJahr] = useState<number>(0);
+  const [pvJahr, setPvJahr] = useState<number>(0);
+  const [rvJahr, setRvJahr] = useState<number>(0);
+  const [avJahr, setAvJahr] = useState<number>(0);
+  // Removed unused state variable "abzuegeGesamtJahr"
+  const [showDetails, setShowDetails] = useState<boolean>(false);
 
   useEffect(() => {
     berechneNetto();
-  }, [bruttoJahr, steuerklasse, hatKinder, istInKirche, bundesland, arbeitsortOst]);
+  }, [bruttoJahr]);
 
   const berechneNetto = () => {
-    const currentWarnings: string[] = [];
-    const steuerklasseInfo = Steuerklassen[steuerklasse as keyof typeof Steuerklassen];
-    let grundfreibetrag = GRUNDFREIBETRAG_2024;
-    if (steuerklasse === 3) {
-      grundfreibetrag = GRUNDFREIBETRAG_MARRIED_2024;
-    } else if (steuerklasse === 6) {
-      grundfreibetrag = 0;
-    }
+    const basisKV_PV = Math.min(bruttoJahr, BBG_KV_PV_2025);
+    const basisRV_AV = Math.min(bruttoJahr, BBG_RV_AV_2025_WEST);
 
-    const bbg_rv_av = arbeitsortOst ? BBG_RV_AV_2024_OST : BBG_RV_AV_2024_WEST;
-    const basisKV_PV = Math.min(bruttoJahr, BBG_KV_PV_2024);
-    const basisRV_AV = Math.min(bruttoJahr, bbg_rv_av);
+    const kv = basisKV_PV * (KV_RATE_EMPLOYEE + KV_ZUSATZBEITRAG_AVG_2025_EMPLOYEE);
+    const pv = basisKV_PV * PV_RATE_EMPLOYEE;
+    const rv = basisRV_AV * RV_RATE_EMPLOYEE;
+    const av = basisRV_AV * AV_RATE_EMPLOYEE;
 
-    const kvBeitrag = basisKV_PV * (KV_RATE_EMPLOYEE + KV_ZUSATZBEITRAG_AVG_2024_EMPLOYEE);
-    const rvBeitrag = basisRV_AV * RV_RATE_EMPLOYEE;
-    const avBeitrag = basisRV_AV * AV_RATE_EMPLOYEE;
+    setKvJahr(kv);
+    setPvJahr(pv);
+    setRvJahr(rv);
+    setAvJahr(av);
 
-    const pvBasisSatz = hatKinder ? PV_RATE_EMPLOYEE_MIT_KIND : PV_RATE_EMPLOYEE_CHILDLESS;
-    let pvBeitrag = basisKV_PV * pvBasisSatz;
-    if (!hatKinder && bundesland === "SN") {
-      currentWarnings.push("PV-Berechnung für Sachsen (SN) ist hier vereinfacht.");
-    }
+    const sozialabgaben = kv + pv + rv + av;
 
-    const gesamtSozialabgaben = kvBeitrag + rvBeitrag + avBeitrag + pvBeitrag;
+    const zvE_lohnsteuer = Math.max(0, bruttoJahr - GRUNDFREIBETRAG_2025);
 
-    currentWarnings.push("Berechnung des zu versteuernden Einkommens (zvE) ist stark vereinfacht (keine korrekte Vorsorgepauschale).");
-    const abzugsfahigeVorsorgeaufwendungen_SIMPLIFIED = gesamtSozialabgaben;
-    let zvE = bruttoJahr - abzugsfahigeVorsorgeaufwendungen_SIMPLIFIED - WERBUNGSKOSTEN_PAUSCHALE;
-    if (steuerklasse !== 3) {
-      zvE -= SONDERABGABEN_PAUSCHALE;
-    } else {
-      zvE -= SONDERABGABEN_PAUSCHALE * 2;
-    }
-    zvE = Math.max(0, zvE - grundfreibetrag);
+    const lohnsteuer = berechneLohnsteuer2025(zvE_lohnsteuer);
+    const soli = lohnsteuer > SOLI_THRESHOLD_SINGLE_2025 ? lohnsteuer * SOLI_RATE : 0;
 
-    currentWarnings.push("Lohnsteuerberechnung verwendet stark vereinfachte Formeln/Tarifzonen.");
-    const lohnsteuer = berechneLohnsteuer_Vereinfacht_2024(zvE);
+    setLohnsteuerJahr(lohnsteuer);
+    setSoliJahr(soli);
 
-    const soliThreshold = steuerklasseInfo.isMarried ? SOLI_THRESHOLD_MARRIED_2024 : SOLI_THRESHOLD_SINGLE_2024;
-    const soli = berechneSoli(lohnsteuer, soliThreshold);
+    const gesamtAbzuege = sozialabgaben + lohnsteuer + soli;
+    // Removed setAbzuegeGesamtJahr as "abzuegeGesamtJahr" is no longer used
 
-    const kirchensteuerSatz = (bundesland === "BY" || bundesland === "BW") ? KIRCHENSTEUER_RATE_BW_BY : KIRCHENSTEUER_RATE_DEFAULT;
-    const kirchensteuer = istInKirche ? lohnsteuer * kirchensteuerSatz : 0;
-
-    const gesamtSteuern = lohnsteuer + soli + kirchensteuer;
-    const gesamtAbzuege = gesamtSozialabgaben + gesamtSteuern;
-    const nettoErgebnis = bruttoJahr - gesamtAbzuege;
-
-    setAbzuege({
-      lohnsteuer,
-      soli,
-      kirchensteuer,
-      kv: kvBeitrag,
-      rv: rvBeitrag,
-      av: avBeitrag,
-      pv: pvBeitrag,
-      gesamtSozialabgaben,
-      gesamtSteuern,
-      gesamt: gesamtAbzuege,
-    });
-
-    setNetto(nettoErgebnis);
+    const nettoJahr = bruttoJahr - gesamtAbzuege;
+    setNettoJahrResult(nettoJahr);
+    setNettoMonat(nettoJahr / 12);
   };
 
-  const berechneLohnsteuer_Vereinfacht_2024 = (zvE: number): number => {
+  const berechneLohnsteuer2025 = (zvE: number): number => {
     if (zvE <= 0) return 0;
-
-    let steuer = 0;
-
-    if (zvE <= TAX_BRACKET_1_LIMIT_2024) {
-      steuer = 0;
-    } else if (zvE <= TAX_BRACKET_2_LIMIT_2024) {
-      const y = (zvE - TAX_BRACKET_1_LIMIT_2024) / 10000;
-      steuer = (1008.70 * y + 1400) * y;
-    } else if (zvE <= TAX_BRACKET_3_LIMIT_2024) {
-      const z = (zvE - TAX_BRACKET_2_LIMIT_2024) / 10000;
-      steuer = (181.19 * z + 2397) * z + 952.48;
-    } else if (zvE <= TAX_BRACKET_4_LIMIT_2024) {
-      steuer = 0.42 * zvE - 10253.58;
+    if (zvE <= TAX_BRACKET_2_LIMIT_2025) {
+      const y = (zvE - GRUNDFREIBETRAG_2025) / 10000;
+      return (997.6 * y + 1400) * y;
+    } else if (zvE <= TAX_BRACKET_3_LIMIT_2025) {
+      const z = (zvE - TAX_BRACKET_2_LIMIT_2025) / 10000;
+      return (206.43 * z + 2397) * z + 965.55;
+    } else if (zvE <= TAX_BRACKET_4_LIMIT_2025) {
+      return 0.42 * zvE - 11767.78;
     } else {
-      steuer = 0.45 * zvE - 18612.90;
+      return 0.45 * zvE - 20104.53;
     }
-
-    return Math.max(0, Math.round(steuer * 100) / 100);
   };
 
-  const berechneSoli = (lohnsteuer: number, soliThreshold: number): number => {
-    if (lohnsteuer <= soliThreshold) {
-      return 0;
-    } else {
-      return Math.round(lohnsteuer * SOLI_RATE * 100) / 100;
-    }
+  const toggleDetails = () => {
+    setShowDetails(!showDetails);
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6 space-y-6">
-      <h2 className="text-2xl font-semibold text-center">Brutto-Netto-Rechner</h2>
+    <div className=" min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto bg-white shadow-md rounded-lg overflow-hidden">
+        <div className="px-6 py-8">
+          <h1 className="text-3xl font-semibold text-gray-800 text-center mb-6">
+            Brutto-Netto-Rechner 2025
+            <span className="text-sm text-gray-500 ml-1">(Vorläufig)</span>
+          </h1>
 
-      <div>
-        <label className="block font-medium text-gray-700">Brutto-Jahresgehalt (€):</label>
-        <input
-          type="number"
-          value={bruttoJahr}
-          onChange={(e) => setBruttoJahr(Number(e.target.value))}
-          className="w-full mt-2 p-2 border rounded-lg border-gray-300"
-        />
-      </div>
+          <div className="mb-4">
+            <label htmlFor="bruttoJahr" className="block text-gray-700 text-sm font-bold mb-2">
+              Brutto-Jahresgehalt (€):
+            </label>
+            <input
+              type="number"
+              id="bruttoJahr"
+              value={bruttoJahr}
+              onChange={(e) => setBruttoJahr(Number(e.target.value))}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            />
+          </div>
 
-      <div>
-        <label className="block font-medium text-gray-700">Steuerklasse:</label>
-        <select
-          value={steuerklasse}
-          onChange={(e) => setSteuerklasse(Number(e.target.value))}
-          className="w-full mt-2 p-2 border rounded-lg border-gray-800 bg-gray-950 text-white"
-        >
-          {Object.entries(Steuerklassen).map(([key, { name }]) => (
-            <option key={key} value={key}>
-              {name}
-            </option>
-          ))}
-        </select>
-      </div>
+          <div className="mb-6 py-4 border-t border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-700">Netto-Gehalt</h2>
+                <p className="text-gray-600 text-sm">Ihr voraussichtliches Netto:</p>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-indigo-600">{formatCurrency(nettoMonat)} <span className="text-sm text-gray-500">/ Monat</span></p>
+                <p className="text-lg text-gray-600">{formatCurrency(nettoJahrResult)} <span className="text-sm text-gray-500">/ Jahr</span></p>
+              </div>
+            </div>
+            <div className="mt-4 text-center">
+              <button
+                onClick={toggleDetails}
+                className="inline-flex items-center px-4 py-2 bg-indigo-500 hover:bg-indigo-700 text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              >
+                {showDetails ? (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                    Weniger Details
+                  </>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13l-3 3m0 0l-3-3m3 3V8m0 13a9 9 0 110-18 9 9 0 010 18z" />
+                    </svg>
+                    Mehr Details
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
 
-      {netto !== null && abzuege !== null && (
-        <div className="p-4 rounded-lg mt-6 border border-gray-200">
-          
-          <p className="text-lg mt-2">Netto-Jahr: <span className="text-green-900 font-semibold" >{netto.toFixed(2)} €</span> </p>
-          <p className="text-lg">Netto-Monat: <span className="text-green-900 font-semibold" >{(netto / 12).toFixed(2)} €</span> </p>
+          {showDetails && (
+            <div className="mt-8 overflow-x-auto">
+              <h3 className="text-lg font-semibold text-gray-700 mb-3">Details der Abzüge</h3>
+              <table className="min-w-full divide-y divide-gray-200 shadow-sm rounded-md">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Posten
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Monatlich
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Jährlich
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Brutto-Gehalt</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">{formatCurrency(bruttoJahr / 12)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">{formatCurrency(bruttoJahr)}</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Lohnsteuer</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">{formatCurrency(lohnsteuerJahr / 12)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">{formatCurrency(lohnsteuerJahr)}</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Kirchensteuer</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">{formatCurrency(0)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">{formatCurrency(0)}</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Solidaritätszuschlag</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">{formatCurrency(soliJahr / 12)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">{formatCurrency(soliJahr)}</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Krankenversicherung</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">{formatCurrency(kvJahr / 12)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">{formatCurrency(kvJahr)}</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Pflegeversicherung</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">{formatCurrency(pvJahr / 12)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">{formatCurrency(pvJahr)}</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Rentenversicherung</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">{formatCurrency(rvJahr / 12)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">{formatCurrency(rvJahr)}</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Arbeitslosenversicherung</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">{formatCurrency(avJahr / 12)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">{formatCurrency(avJahr)}</td>
+                  </tr>
+                  <tr className="font-bold">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">Netto-Gehalt</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-indigo-600 text-right">{formatCurrency(nettoMonat)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-indigo-600 text-right">{formatCurrency(nettoJahrResult)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-      )}
+
+      </div>
     </div>
   );
 };
 
-export default BruttoNettoRechner2024;
+export default BruttoNettoRechnerModern;
